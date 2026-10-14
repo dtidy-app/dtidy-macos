@@ -1,32 +1,32 @@
 // swift-tools-version: 6.0
 //
-// dsort - sort loose items on the macOS Desktop, with undo.
-// Copyright (C) 2026 dsort contributors. Licensed under GPL-3.0-or-later.
+// dtidy - sort loose items on the macOS Desktop, with undo.
+// Copyright (C) 2026 dtidy contributors. Licensed under GPL-3.0-or-later.
 
 import PackageDescription
 
 let package = Package(
-    name: "dsort",
+    name: "dtidy",
     platforms: [.macOS(.v14)],
     products: [
-        .executable(name: "dsort", targets: ["dsort"]),
+        .executable(name: "dtidy", targets: ["dtidy"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", exact: "1.8.2"),
     ],
     targets: [
-        .target(name: "DSortCore"),
-        .target(name: "DSortIO", dependencies: ["DSortCore"]),
+        .target(name: "DTidyCore"),
+        .target(name: "DTidyIO", dependencies: ["DTidyCore"]),
         .executableTarget(
-            name: "dsort",
+            name: "dtidy",
             dependencies: [
-                "DSortCore",
-                "DSortIO",
+                "DTidyCore",
+                "DTidyIO",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ]
         ),
-        .testTarget(name: "DSortCoreTests", dependencies: ["DSortCore"]),
-        .testTarget(name: "DSortIOTests", dependencies: ["DSortCore", "DSortIO"]),
+        .testTarget(name: "DTidyCoreTests", dependencies: ["DTidyCore"]),
+        .testTarget(name: "DTidyIOTests", dependencies: ["DTidyCore", "DTidyIO"]),
     ],
     swiftLanguageModes: [.v6]
 )

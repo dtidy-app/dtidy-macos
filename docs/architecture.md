@@ -1,8 +1,8 @@
 # Architecture
 
-This document explains how dsort is put together and why. It is written for maintainers and for anyone porting dsort to another platform.
+This document explains how dtidy is put together and why. It is written for maintainers and for anyone porting dtidy to another platform.
 
-- **What dsort must do** is defined by the specs in [`openspec/specs/`](../openspec/specs/).
+- **What dtidy must do** is defined by the specs in [`openspec/specs/`](../openspec/specs/).
 - **How macOS provides each guarantee** is in [platform-macos.md](platform-macos.md).
 - **How to start a new platform** is in [porting.md](porting.md).
 
@@ -33,9 +33,9 @@ A sort run is a straight pipeline. Only the edges touch the filesystem.
 
 | Module | Role | Filesystem access |
 |---|---|---|
-| `Sources/DSortCore` | Models, configuration parsing and validation, classifier, planner, suffix naming, ledger codec, run-state derivation (`History`), undo decision table (`Reconciler`), text and JSON rendering | None. Every observation arrives as a value, so all rules are unit-tested without a disk. |
-| `Sources/DSortIO` | `FileOps` (every system call, behind a protocol), `Scanner`, `Executor`, `SortService`, `UndoService`, `RecoverService`, `Doctor`, ledger writer/store, run lock, config loader | Yes. Every operation on user files (listing, identity, renames, folder creation and removal, lookups) goes through `FileOps`, and tests swap in a fault-injecting one. Ledger, lock, and config files are read and written directly, and so is the `.DS_Store` deletion during undo. |
-| `Sources/dsort` | The command-line interface (swift-argument-parser): parses arguments, calls a service, prints the report, maps errors to exit codes | Only through the services |
+| `Sources/DTidyCore` | Models, configuration parsing and validation, classifier, planner, suffix naming, ledger codec, run-state derivation (`History`), undo decision table (`Reconciler`), text and JSON rendering | None. Every observation arrives as a value, so all rules are unit-tested without a disk. |
+| `Sources/DTidyIO` | `FileOps` (every system call, behind a protocol), `Scanner`, `Executor`, `SortService`, `UndoService`, `RecoverService`, `Doctor`, ledger writer/store, run lock, config loader | Yes. Every operation on user files (listing, identity, renames, folder creation and removal, lookups) goes through `FileOps`, and tests swap in a fault-injecting one. Ledger, lock, and config files are read and written directly, and so is the `.DS_Store` deletion during undo. |
+| `Sources/dtidy` | The command-line interface (swift-argument-parser): parses arguments, calls a service, prints the report, maps errors to exit codes | Only through the services |
 
 A port keeps this split: the pure core can be translated almost line by line, and only the I/O layer is truly platform-specific.
 
@@ -43,7 +43,7 @@ A port keeps this split: the pure core can be translated almost line by line, an
 
 These hold on every platform. Breaking any of them is a bug.
 
-1. **Rename only, never replace.** Files are moved with an atomic rename that fails if the target name exists. dsort never overwrites, deletes, or copies a user file. The one exception: undo deletes the platform's folder-metadata file so it can remove an otherwise empty bucket folder.
+1. **Rename only, never replace.** Files are moved with an atomic rename that fails if the target name exists. dtidy never overwrites, deletes, or copies a user file. The one exception: undo deletes the platform's folder-metadata file so it can remove an otherwise empty bucket folder.
 2. **The plan is durable before anything moves.** Every planned move and folder is written to the ledger and flushed before the first change on disk. After a crash, every file is therefore either at its source or at its recorded destination.
 3. **Only "does not exist" means missing.** A lookup that fails for any other reason (permission denied, I/O error) is reported as `inaccessible`, never treated as deletion.
 4. **One run at a time.** `run`, `undo`, and `recover` hold an exclusive, non-blocking lock. A second process exits with code 75.
@@ -56,9 +56,9 @@ These hold on every platform. Breaking any of them is a bug.
 |---|---|---|
 | Sequential execution | Renames into the same folder serialize in the kernel anyway; a few hundred renames take about a millisecond. Sequential order keeps the ledger deterministic. | Parallel moves: no throughput gain, nondeterministic ledger. |
 | Plan-as-intent ledger with two flush points | The flush after the plan and the one at commit are enough. Lost per-move `done` lines can be recomputed from file identity, because each rename is atomic. | A flush before every move: twice as many flushes for no added safety. |
-| Ordering flushes (barriers) instead of full device flushes | dsort needs the ledger to reach disk before the renames that follow, not a guarantee against power loss of the disk cache. Losing the ledger never loses user data. | Full device flush per record: much slower, no extra protection for files. |
+| Ordering flushes (barriers) instead of full device flushes | dtidy needs the ledger to reach disk before the renames that follow, not a guarantee against power loss of the disk cache. Losing the ledger never loses user data. | Full device flush per record: much slower, no extra protection for files. |
 | JSON Lines ledger | Appending a line is crash-safe; a half-written last line is detected and ignored. | One JSON document: cannot be appended safely. Binary: not inspectable. |
-| A config file replaces the built-in rules | No merge rules to explain or debug. `dsort config init` writes the defaults as a starting point, so the file and the built-ins never drift. | Merging user rules into defaults: ambiguous ordering and removal. |
+| A config file replaces the built-in rules | No merge rules to explain or debug. `dtidy config init` writes the defaults as a starting point, so the file and the built-ins never drift. | Merging user rules into defaults: ambiguous ordering and removal. |
 | No file-manager scripting | The file manager notices renames on its own, so scripting it would only add a permission prompt and a failure mode. | Asking the file manager to refresh after each run. |
 | Top-level only, plain folders skipped by default | The Desktop's top level is where clutter accumulates; folders are usually deliberate. | Recursive sorting: surprising and hard to undo mentally. |
 | Document tracking turned on before moving | Without it, an app's safe save gives a file a new file identifier, and undo would lose track of it. | Accept `replaced` for safe-saved files. |
@@ -77,8 +77,8 @@ The specs use these platform-neutral terms. Each platform document defines how i
 | platform type system | How a file's type is derived from its extension, including any hierarchy (for example "PNG is an image"). |
 | platform trash | The folders holding deleted-but-recoverable files. |
 | folder-metadata file | A file the file manager creates inside folders to store view settings. It is not user content. |
-| data directory | The per-user application-data location for dsort; ledgers live in its `history/` folder. |
-| config file | The per-user location of dsort's `config.json`. |
+| data directory | The per-user application-data location for dtidy; ledgers live in its `history/` folder. |
+| config file | The per-user location of dtidy's `config.json`. |
 
 Other terms used throughout:
 

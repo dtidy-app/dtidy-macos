@@ -2,20 +2,20 @@
 
 ## Purpose
 
-Defines how dsort binds the platform-neutral guarantees of the other capabilities to macOS: default locations, file metadata, document tracking, privacy permissions, and the interaction with Finder.
+Defines how dtidy binds the platform-neutral guarantees of the other capabilities to macOS: default locations, file metadata, document tracking, privacy permissions, and the interaction with Finder.
 
 ## Requirements
 
 ### Requirement: Default locations on macOS
-On macOS the default root folder SHALL be `~/Desktop`. The platform data directory SHALL be `~/Library/Application Support/dsort`, and the platform config file SHALL be `~/.config/dsort/config.json`. Either one is overridden by its XDG variable when that variable is set and non-empty.
+On macOS the default root folder SHALL be `~/Desktop`. The platform data directory SHALL be `~/Library/Application Support/dtidy`, and the platform config file SHALL be `~/.config/dtidy/config.json`. Either one is overridden by its XDG variable when that variable is set and non-empty.
 
 #### Scenario: Default ledger location
 - **WHEN** `XDG_DATA_HOME` is unset and a run completes
-- **THEN** its ledger exists under `~/Library/Application Support/dsort/history/`
+- **THEN** its ledger exists under `~/Library/Application Support/dtidy/history/`
 
 #### Scenario: Default config location
 - **WHEN** `XDG_CONFIG_HOME` is unset and no `--config` is given
-- **THEN** `dsort config path` reports `~/.config/dsort/config.json`
+- **THEN** `dtidy config path` reports `~/.config/dtidy/config.json`
 
 ### Requirement: Screen-capture marker on macOS
 On macOS the screen-capture marker SHALL be the extended attribute `com.apple.metadata:kMDItemIsScreenCapture`, counted only when its value decodes as a property list to boolean true.
@@ -65,7 +65,7 @@ On macOS a file's identity SHALL be its volume's `f_fsid`, its inode number, and
 - **THEN** its ledger entry records the volume `fsid`, the inode, the birth time, and the document ID
 
 ### Requirement: Document tracking on macOS
-On macOS, enabling document tracking SHALL mean setting the `UF_TRACKED` flag. dsort SHALL set it only on files that lack it, record `trackedByUs`, and never clear it, including during undo.
+On macOS, enabling document tracking SHALL mean setting the `UF_TRACKED` flag. dtidy SHALL set it only on files that lack it, record `trackedByUs`, and never clear it, including during undo.
 
 #### Scenario: Flag set before the move and kept after undo
 - **WHEN** an untracked `notes.txt` is sorted and later restored by undo
@@ -93,19 +93,19 @@ On macOS an item SHALL be hidden exactly when its name begins with `.`. The `UF_
 - **THEN** it is classified like any other file
 
 ### Requirement: Privacy permissions on macOS
-When macOS privacy controls (TCC) deny access to the root folder, the message SHALL name the responsible app and how to grant access. The app is the terminal when `TERM_PROGRAM` identifies one, otherwise the dsort binary. Access is granted under System Settings > Privacy & Security > Files and Folders or Full Disk Access, and the message SHALL include a command that opens that pane.
+When macOS privacy controls (TCC) deny access to the root folder, the message SHALL name the responsible app and how to grant access. The app is the terminal when `TERM_PROGRAM` identifies one, otherwise the dtidy binary. Access is granted under System Settings > Privacy & Security > Files and Folders or Full Disk Access, and the message SHALL include a command that opens that pane.
 
 #### Scenario: Terminal lacks Desktop access
 - **WHEN** reading `~/Desktop` from Terminal fails with `Operation not permitted`
-- **THEN** dsort exits 77 and the message names Terminal and the Privacy & Security pane
+- **THEN** dtidy exits 77 and the message names Terminal and the Privacy & Security pane
 
 #### Scenario: launchd agent lacks access
 - **WHEN** the same failure happens with no `TERM_PROGRAM` set
-- **THEN** the message names the dsort binary's path
+- **THEN** the message names the dtidy binary's path
 
 ### Requirement: No Apple Events on macOS
-On macOS, dsort SHALL NOT send Apple Events or run AppleScript, and SHALL NOT require Automation permission. Finder picks up renames by other processes without a refresh request.
+On macOS, dtidy SHALL NOT send Apple Events or run AppleScript, and SHALL NOT require Automation permission. Finder picks up renames by other processes without a refresh request.
 
 #### Scenario: Run under launchd
-- **WHEN** dsort runs as a `launchd` agent
+- **WHEN** dtidy runs as a `launchd` agent
 - **THEN** no Automation permission prompt or Apple Events error can occur

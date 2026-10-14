@@ -1,10 +1,10 @@
-# dsort
+# dtidy
 
-`dsort` is a small command-line tool for macOS that tidies the top level of your Desktop into category folders, and can put everything back with `dsort undo`.
+`dtidy` is a small command-line tool for macOS that tidies the top level of your Desktop into category folders, and can put everything back with `dtidy undo`.
 
 - **Native and fast.** A single Swift binary, no runtime dependencies, no shell scripts, no AppleScript.
-- **Non-destructive.** Files are only ever renamed with an exclusive, atomic rename. dsort never overwrites, deletes, or copies your files.
-- **Reversible.** Every run is recorded in a ledger before anything moves, and `dsort undo` finds files even after you moved, renamed, or edited them.
+- **Non-destructive.** Files are only ever renamed with an exclusive, atomic rename. dtidy never overwrites, deletes, or copies your files.
+- **Reversible.** Every run is recorded in a ledger before anything moves, and `dtidy undo` finds files even after you moved, renamed, or edited them.
 
 Requires macOS 14 (Sonoma) or later.
 
@@ -12,7 +12,7 @@ Requires macOS 14 (Sonoma) or later.
 
 ```sh
 swift build -c release
-cp .build/release/dsort /usr/local/bin/   # or anywhere on your PATH
+cp .build/release/dtidy /usr/local/bin/   # or anywhere on your PATH
 ```
 
 Run the tests with `swift test`.
@@ -20,51 +20,51 @@ Run the tests with `swift test`.
 ## Sort the Desktop
 
 ```sh
-dsort            # same as `dsort run`
-dsort run --json
-dsort run --root ~/Downloads
+dtidy            # same as `dtidy run`
+dtidy run --json
+dtidy run --root ~/Downloads
 ```
 
-dsort looks only at the top level of the root folder and moves each eligible item into a bucket folder inside it, such as `Images/`, `Images/_Screenshots/`, `PDFs/`, `Documents/`, `Code/`, `Archives/`, or `Other/`. Folders are created only when something goes into them.
+dtidy looks only at the top level of the root folder and moves each eligible item into a bucket folder inside it, such as `Images/`, `Images/_Screenshots/`, `PDFs/`, `Documents/`, `Code/`, `Archives/`, or `Other/`. Folders are created only when something goes into them.
 
-What dsort guarantees:
+What dtidy guarantees:
 
 - **Nothing is overwritten.** Every move is an atomic rename that fails if the target name exists, including names that differ only by case. A taken name gets a Finder-style suffix: `invoice (1).pdf`, `backup (1).tar.gz`.
 - **Nothing is deleted or copied.** A bucket on a different volume is refused (`cross-volume`) instead of copying.
-- **Nothing runs twice at once.** A lock in the data directory makes a second dsort process exit with code 75.
-- **After a crash, sorting waits.** If a run was interrupted, `dsort run` refuses to start until you run `dsort recover`.
+- **Nothing runs twice at once.** A lock in the data directory makes a second dtidy process exit with code 75.
+- **After a crash, sorting waits.** If a run was interrupted, `dtidy run` refuses to start until you run `dtidy recover`.
 
-**Side effect: the tracked flag.** Before moving a file, dsort sets the file's `UF_TRACKED` flag (the same flag Preview and TextEdit set). The kernel then gives the file a document ID that survives "safe saves" by apps, so `dsort undo` can find the file even after you edit it. Undo leaves the flag in place. The ledger records which files dsort flagged.
+**Side effect: the tracked flag.** Before moving a file, dtidy sets the file's `UF_TRACKED` flag (the same flag Preview and TextEdit set). The kernel then gives the file a document ID that survives "safe saves" by apps, so `dtidy undo` can find the file even after you edit it. Undo leaves the flag in place. The ledger records which files dtidy flagged.
 
 ### Exit codes
 
 | Code | Meaning |
 |---|---|
 | 0 | Every planned action succeeded. |
-| 1 | Some items failed or were left unresolved, or an interrupted run needs `dsort recover`. |
+| 1 | Some items failed or were left unresolved, or an interrupted run needs `dtidy recover`. |
 | 64 | Usage or configuration error. |
-| 75 | Another dsort process holds the lock. |
+| 75 | Another dtidy process holds the lock. |
 | 77 | macOS denied access to the folder (see below). |
 
 ### Permissions
 
-The Desktop is protected by macOS privacy controls. On the first run, macOS asks whether your terminal app may access the Desktop folder. If access is denied, dsort exits with code 77 and says which app needs permission. Grant it in **System Settings > Privacy & Security > Files and Folders** (Desktop Folder) or **Full Disk Access**:
+The Desktop is protected by macOS privacy controls. On the first run, macOS asks whether your terminal app may access the Desktop folder. If access is denied, dtidy exits with code 77 and says which app needs permission. Grant it in **System Settings > Privacy & Security > Files and Folders** (Desktop Folder) or **Full Disk Access**:
 
 ```sh
 open "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"
 ```
 
-Under `launchd` there is no terminal, so macOS checks the `dsort` binary itself. Add the binary to Full Disk Access. A locally built binary is ad-hoc signed, and macOS ties the grant to that exact build: **after every rebuild you must grant access again**, or sign the binary with a stable identity.
+Under `launchd` there is no terminal, so macOS checks the `dtidy` binary itself. Add the binary to Full Disk Access. A locally built binary is ad-hoc signed, and macOS ties the grant to that exact build: **after every rebuild you must grant access again**, or sign the binary with a stable identity.
 
-dsort never uses AppleScript or Apple Events, so it never needs Automation permission. Finder picks up the moves on its own.
+dtidy never uses AppleScript or Apple Events, so it never needs Automation permission. Finder picks up the moves on its own.
 
 ## Undo
 
 ```sh
-dsort undo                  # reverse the most recent run that is not fully reverted
-dsort undo <run-id>         # reverse a specific sort run
-dsort undo --dry-run        # show what would happen, change nothing
-dsort undo --json
+dtidy undo                  # reverse the most recent run that is not fully reverted
+dtidy undo <run-id>         # reverse a specific sort run
+dtidy undo --dry-run        # show what would happen, change nothing
+dtidy undo --json
 ```
 
 For each moved file, undo looks:
@@ -89,27 +89,27 @@ Each entry ends with one of these outcomes:
 | `skipped-conflict` | The original name was taken and `--on-conflict skip` was given. |
 | `failed` | The rename failed for another reason; the detail says why. |
 
-dsort follows macOS's document identity. A tracked file that you delete and recreate at the same path counts as the same document, so it is restored rather than reported as `replaced`.
+dtidy follows macOS's document identity. A tracked file that you delete and recreate at the same path counts as the same document, so it is restored rather than reported as `replaced`.
 
-Undo exits 0 only when every entry is restored or already restored, otherwise 1. A run with unresolved entries becomes `partially-reverted`. Fix the cause, for example by granting folder access, then run `dsort undo <run-id>` again: only the unresolved entries are retried.
+Undo exits 0 only when every entry is restored or already restored, otherwise 1. A run with unresolved entries becomes `partially-reverted`. Fix the cause, for example by granting folder access, then run `dtidy undo <run-id>` again: only the unresolved entries are retried.
 
 ## After a crash
 
-If dsort is killed, or the Mac loses power, in the middle of a run, the ledger already holds the complete plan. Every rename is atomic, so each file is either still in its original place or fully moved.
+If dtidy is killed, or the Mac loses power, in the middle of a run, the ledger already holds the complete plan. Every rename is atomic, so each file is either still in its original place or fully moved.
 
-1. `dsort history` shows the run as `interrupted`, and `dsort run` refuses to start (exit code 1) until it is reconciled.
-2. `dsort recover` checks every planned move by file identity and records which files moved. The run becomes `recovered`.
-3. `dsort undo` can now reverse the moves that happened, like any other run.
+1. `dtidy history` shows the run as `interrupted`, and `dtidy run` refuses to start (exit code 1) until it is reconciled.
+2. `dtidy recover` checks every planned move by file identity and records which files moved. The run becomes `recovered`.
+3. `dtidy undo` can now reverse the moves that happened, like any other run.
 
 ```sh
-dsort recover
-dsort undo
+dtidy recover
+dtidy undo
 ```
 
 ## Check your setup
 
 ```sh
-dsort doctor
+dtidy doctor
 ```
 
 `doctor` changes nothing. It reports whether:
@@ -124,25 +124,27 @@ It also shows where the config and data directories are. It exits 0 when every c
 
 ## Run on a schedule with launchd
 
-[`examples/local.dsort.plist`](examples/local.dsort.plist) runs `dsort run` once an hour:
+[`examples/local.dtidy.plist`](examples/local.dtidy.plist) runs `dtidy run` once an hour:
 
 ```sh
-cp examples/local.dsort.plist ~/Library/LaunchAgents/
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/local.dsort.plist
+cp examples/local.dtidy.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/local.dtidy.plist
 ```
 
-Edit the binary path in the plist if `dsort` is not in `/usr/local/bin`. Output goes to `/tmp/dsort.log`. To stop the schedule, run `launchctl bootout gui/$(id -u)/local.dsort`.
+Edit the binary path in the plist if `dtidy` is not in `/usr/local/bin`. Output goes to `/tmp/dtidy.log`. To stop the schedule, run `launchctl bootout gui/$(id -u)/local.dtidy`.
 
-Under launchd, macOS checks the `dsort` binary itself for Desktop access, not your terminal. Add the binary to **System Settings > Privacy & Security > Full Disk Access** before the first scheduled run, and again after every rebuild (see [Permissions](#permissions)). A denied run exits with code 77 and logs which binary needs access. Files modified in the last 10 seconds are skipped, so half-written screenshots and downloads wait for the next run.
+If you loaded the agent under its earlier name, stop it first with `launchctl bootout gui/$(id -u)/local.dsort`.
+
+Under launchd, macOS checks the `dtidy` binary itself for Desktop access, not your terminal. Add the binary to **System Settings > Privacy & Security > Full Disk Access** before the first scheduled run, and again after every rebuild (see [Permissions](#permissions)). A denied run exits with code 77 and logs which binary needs access. Files modified in the last 10 seconds are skipped, so half-written screenshots and downloads wait for the next run.
 
 ## Preview a run
 
-`dsort plan` (or `dsort run --dry-run`) prints exactly what a run would do, and changes nothing: no files, folders, flags, ledger, or lock.
+`dtidy plan` (or `dtidy run --dry-run`) prints exactly what a run would do, and changes nothing: no files, folders, flags, ledger, or lock.
 
 ```sh
-dsort plan                      # sort ~/Desktop (or the configured root)
-dsort plan --root ~/Downloads   # preview another folder
-dsort plan --json               # machine-readable plan on stdout
+dtidy plan                      # sort ~/Desktop (or the configured root)
+dtidy plan --root ~/Downloads   # preview another folder
+dtidy plan --json               # machine-readable plan on stdout
 ```
 
 ```
@@ -161,34 +163,34 @@ Each move shows the rule that matched: a triage rule's name, `extension`, `type`
 
 Every run that moves something writes a ledger before the first move happens. Ledgers live in:
 
-- `$XDG_DATA_HOME/dsort/history/` when `XDG_DATA_HOME` is set, otherwise
-- `~/Library/Application Support/dsort/history/`
+- `$XDG_DATA_HOME/dtidy/history/` when `XDG_DATA_HOME` is set, otherwise
+- `~/Library/Application Support/dtidy/history/`
 
 Each run has one file, `<run-id>.jsonl`, named by a run ID such as `20261014T190912Z-3f9a0c1d2e4b` (UTC start time plus a random suffix). Ledgers are plain text, one JSON record per line, and are never edited after the fact: undo and recovery write their own ledgers. The record format is documented in [docs/ledger-format.md](docs/ledger-format.md).
 
 ```sh
-dsort history              # newest first: run ID, kind, start time, state, counts
-dsort history --limit 5
-dsort show <run-id>        # every move of one run, with outcome and actual destination
+dtidy history              # newest first: run ID, kind, start time, state, counts
+dtidy history --limit 5
+dtidy show <run-id>        # every move of one run, with outcome and actual destination
 ```
 
-A run's state is one of `committed`, `interrupted` (it stopped before finishing; run `dsort recover`), `recovered`, `partially-reverted`, or `reverted`. Both commands accept `--json`.
+A run's state is one of `committed`, `interrupted` (it stopped before finishing; run `dtidy recover`), `recovered`, `partially-reverted`, or `reverted`. Both commands accept `--json`.
 
 A run with nothing to move does not write a ledger, so a `launchd` schedule does not fill the history with empty runs.
 
 ## Configuration
 
-dsort works without any configuration. To customize it, create a config file:
+dtidy works without any configuration. To customize it, create a config file:
 
 ```sh
-dsort config init       # writes the built-in defaults, never overwrites
-dsort config path       # shows which file is in effect
-dsort config validate   # checks it without touching the Desktop
+dtidy config init       # writes the built-in defaults, never overwrites
+dtidy config path       # shows which file is in effect
+dtidy config validate   # checks it without touching the Desktop
 ```
 
-The config file is read from `--config PATH`, otherwise `$XDG_CONFIG_HOME/dsort/config.json`, otherwise `~/.config/dsort/config.json`.
+The config file is read from `--config PATH`, otherwise `$XDG_CONFIG_HOME/dtidy/config.json`, otherwise `~/.config/dtidy/config.json`.
 
-**A config file replaces the built-in rules.** Fields you leave out take the defaults below, but the rule lists `triage` and `categories` are empty unless you write them. The easiest start is `dsort config init`, then edit the result.
+**A config file replaces the built-in rules.** Fields you leave out take the defaults below, but the rule lists `triage` and `categories` are empty unless you write them. The easiest start is `dtidy config init`, then edit the result.
 
 | Field | Default | Meaning |
 |---|---|---|
@@ -232,15 +234,15 @@ Validation rejects unknown fields, regular expressions that do not compile, unkn
 
 ## Documentation
 
-This README is for people using dsort. For maintainers and anyone porting it:
+This README is for people using dtidy. For maintainers and anyone porting it:
 
-- [docs/architecture.md](docs/architecture.md): how dsort is built, the invariants it never breaks, and why.
+- [docs/architecture.md](docs/architecture.md): how dtidy is built, the invariants it never breaks, and why.
 - [docs/ledger-format.md](docs/ledger-format.md): the run ledger format and how run state is derived.
 - [docs/platform-macos.md](docs/platform-macos.md): which macOS mechanism provides each guarantee, and what was verified about macOS.
-- [docs/porting.md](docs/porting.md): how to bring dsort to another operating system.
+- [docs/porting.md](docs/porting.md): how to bring dtidy to another operating system.
 - [AGENTS.md](AGENTS.md): a short map for coding agents.
 - [`openspec/specs/`](openspec/specs/): the behaviour specification.
 
 ## License
 
-dsort is free software, released under the GNU General Public License v3.0 or later. See [LICENSE](LICENSE).
+dtidy is free software, released under the GNU General Public License v3.0 or later. See [LICENSE](LICENSE).

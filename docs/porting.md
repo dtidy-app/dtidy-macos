@@ -1,6 +1,6 @@
-# Porting dsort to another platform
+# Porting dtidy to another platform
 
-This guide is for building dsort for another operating system, by hand or with a coding agent. The macOS version is the reference implementation, but **the specs, not the Swift code, define what a port must do.**
+This guide is for building dtidy for another operating system, by hand or with a coding agent. The macOS version is the reference implementation, but **the specs, not the Swift code, define what a port must do.**
 
 ## What carries over unchanged
 
@@ -39,8 +39,8 @@ Copy this table into `docs/platform-<os>.md` and fill in the last two columns. T
 | links to skip | item-classification › Symbolic links are skipped | symlinks | | |
 | platform trash | run-undo › Trashed files are not restored | `/.Trash/`, `/.Trashes/` | | |
 | folder-metadata file | run-undo › Empty bucket folders are removed | `.DS_Store` | | |
-| data directory | run-ledger › Ledger location | `~/Library/Application Support/dsort` | | |
-| config file | sort-configuration › Config file location | `~/.config/dsort/config.json` | | |
+| data directory | run-ledger › Ledger location | `~/Library/Application Support/dtidy` | | |
+| config file | sort-configuration › Config file location | `~/.config/dtidy/config.json` | | |
 | exclusive atomic rename | sort-execution › Moves never overwrite | `renamex_np` + `RENAME_EXCL` | | |
 | case-insensitive names | sort-execution › Moves never overwrite | volume capability flag | | |
 | current path by file identifier | run-undo › Locating moved files | `fsgetpath` | | |
@@ -62,8 +62,8 @@ Copy this table into `docs/platform-<os>.md` and fill in the last two columns. T
 | file identity | `GetFileInformationByHandleEx(FileIdInfo)`: volume serial number + 128-bit file ID; creation time from `GetFileInformationByHandle` | NTFS "tunneling" can give a file recreated under a recently deleted name the old creation time. Check that the creation-time guard still works. |
 | current path by file identifier | `OpenFileById` + `GetFinalPathNameByHandleW` | Path prefixes (`\\?\`) must be normalized before comparing with recorded paths, much as macOS needs `realpath`. |
 | document identity / tracking | NTFS object IDs (`FSCTL_CREATE_OR_GET_OBJECT_ID`) and the Distributed Link Tracking service | Unknown whether IDs survive common safe-save patterns (`ReplaceFileW`, write-temp-then-rename). This is the most important spike. |
-| data directory | `%LOCALAPPDATA%\dsort` | |
-| config file | `%APPDATA%\dsort\config.json` | |
+| data directory | `%LOCALAPPDATA%\dtidy` | |
+| config file | `%APPDATA%\dtidy\config.json` | |
 
 ### Moves and the ledger
 
@@ -92,7 +92,7 @@ Copy this table into `docs/platform-<os>.md` and fill in the last two columns. T
 
 ## Sharing specs between platforms
 
-While there is one implementation, the specs live in this repository. Once a second platform exists, move the core specs into a shared OpenSpec repository (a "store"), and have each implementation point at it. Each platform keeps only its `platform-<os>` spec and docs locally, so a spec change is made once and reviewed for every platform. See `openspec store --help` for how projects reference a store; this has not been set up for dsort yet.
+While there is one implementation, the specs live in this repository. Once a second platform exists, move the core specs into a shared OpenSpec repository (a "store"), and have each implementation point at it. Each platform keeps only its `platform-<os>` spec and docs locally, so a spec change is made once and reviewed for every platform. See `openspec store --help` for how projects reference a store; this has not been set up for dtidy yet.
 
 An agent working on a port then needs only:
 - the new project's `AGENTS.md`;

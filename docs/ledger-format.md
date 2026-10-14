@@ -1,14 +1,14 @@
 # Ledger format
 
-Every run that changes something leaves one ledger file. Ledgers are the only record of what dsort did, and the only input for `history`, `show`, `recover`, and `undo`. This document is the contract for that format. `swift test` fails if a record type exists in the code but not here.
+Every run that changes something leaves one ledger file. Ledgers are the only record of what dtidy did, and the only input for `history`, `show`, `recover`, and `undo`. This document is the contract for that format. `swift test` fails if a record type exists in the code but not here.
 
 The behaviour these records support is specified in the `run-ledger` and `run-undo` specs under [`openspec/specs/`](../openspec/specs/). The reasons for the format are in [architecture.md](architecture.md#key-decisions).
 
 ## Files
 
-- **Location:** `<data directory>/history/<run-id>.jsonl`. The data directory is `$XDG_DATA_HOME/dsort` when that variable is set and non-empty, otherwise the platform location (`~/Library/Application Support/dsort` on macOS).
+- **Location:** `<data directory>/history/<run-id>.jsonl`. The data directory is `$XDG_DATA_HOME/dtidy` when that variable is set and non-empty, otherwise the platform location (`~/Library/Application Support/dtidy` on macOS).
 - **Permissions:** the history folder is created with mode `0700`; each ledger file with mode `0600`.
-- **Creation:** a ledger file is created exclusively, so dsort fails rather than reuse an existing file, and opened append-only. It is never rewritten or truncated.
+- **Creation:** a ledger file is created exclusively, so dtidy fails rather than reuse an existing file, and opened append-only. It is never rewritten or truncated.
 - **Run ID:** `YYYYMMDDTHHMMSSZ-` (UTC start time) followed by 12 lowercase hex digits, for example `20261014T190912Z-3f9a0c1d2e4b`.
 - **Empty runs:** a run whose plan has no moves writes no ledger.
 
@@ -20,7 +20,7 @@ The behaviour these records support is specified in the `run-ledger` and `run-un
 - **Truncation:** if the file does not end with `\n`, its last line is treated as cut off by a crash and ignored, even if it happens to parse.
 - **Corruption:** a line that cannot be decoded anywhere else (including an unknown `t`) is skipped, and the ledger is marked corrupt.
 
-"Flushed" below means dsort issues an ordering flush (`F_BARRIERFSYNC` on macOS) after writing the record and before the next change on disk. Records that are not flushed reach disk with the next flush.
+"Flushed" below means dtidy issues an ordering flush (`F_BARRIERFSYNC` on macOS) after writing the record and before the next change on disk. Records that are not flushed reach disk with the next flush.
 
 ## Record types
 
@@ -35,7 +35,7 @@ The header: first line of every ledger.
 | `kind` | string | `sort`, `undo`, or `recover`. |
 | `ts` | string | Start time, ISO 8601 UTC with milliseconds. |
 | `root` | string | Absolute path of the root folder, symlinks resolved. |
-| `tool` | string | dsort version that wrote the ledger. |
+| `tool` | string | dtidy version that wrote the ledger. |
 | `reverts` | string? | Undo ledgers only: the sort run being reversed. |
 | `recovers` | string? | Recover ledgers only: the interrupted sort run being reconciled. |
 
@@ -65,7 +65,7 @@ The plan is complete. Field: `moves` (number of `move` records). **Flushed.** No
 
 ### `tracked`
 
-Document tracking for one entry, written just before its rename. Fields: `seq`; `docid` (document identity, `0` when none); `byUs` (`true` if dsort turned tracking on, `false` if it was already on or could not be turned on). Not flushed.
+Document tracking for one entry, written just before its rename. Fields: `seq`; `docid` (document identity, `0` when none); `byUs` (`true` if dtidy turned tracking on, `false` if it was already on or could not be turned on). Not flushed.
 
 ### `retarget`
 

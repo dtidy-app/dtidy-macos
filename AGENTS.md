@@ -1,17 +1,17 @@
 # AGENTS.md
 
-dsort is a macOS command-line tool that sorts the top level of the Desktop into bucket folders and can undo every run. Swift 6, Swift Package Manager, macOS 14+, GPL-3.0.
+dtidy is a macOS command-line tool that sorts the top level of the Desktop into bucket folders and can undo every run. Swift 6, Swift Package Manager, macOS 14+, GPL-3.0.
 
 ## Where the truth lives
 
 | Question | Read |
 |---|---|
-| What must dsort do? (behaviour, edge cases, exit codes) | `openspec/specs/*/spec.md` |
+| What must dtidy do? (behaviour, edge cases, exit codes) | `openspec/specs/*/spec.md` |
 | What does a guarantee mean on macOS specifically? | `openspec/specs/platform-macos/spec.md` |
 | How is it built, which invariants must never break, and why? | `docs/architecture.md` |
 | What is in a ledger file, and how is run state derived? | `docs/ledger-format.md` |
 | Which macOS API provides each guarantee, and what was verified about the kernel? | `docs/platform-macos.md` |
-| How do I bring dsort to another OS? | `docs/porting.md` |
+| How do I bring dtidy to another OS? | `docs/porting.md` |
 | How do users run it? | `README.md` |
 
 Rules:
@@ -23,17 +23,17 @@ Rules:
 ## Build and test
 
 ```sh
-swift build                 # debug build: .build/debug/dsort
+swift build                 # debug build: .build/debug/dtidy
 swift test                  # all unit and filesystem tests (they use temp directories only)
-swift build -c release      # release build: .build/release/dsort
+swift build -c release      # release build: .build/release/dtidy
 ```
 
-Tests never touch the real Desktop. Manual runs against a scratch folder: `dsort plan --root <dir>`; set `XDG_DATA_HOME` and `XDG_CONFIG_HOME` to scratch folders to keep the real history and config untouched.
+Tests never touch the real Desktop. Manual runs against a scratch folder: `dtidy plan --root <dir>`; set `XDG_DATA_HOME` and `XDG_CONFIG_HOME` to scratch folders to keep the real history and config untouched.
 
 ## Code layout
 
-- `Sources/DSortCore`: pure logic, no filesystem access.
-- `Sources/DSortIO`: everything that touches the disk, behind the `FileOps` protocol.
-- `Sources/dsort`: the CLI.
+- `Sources/DTidyCore`: pure logic, no filesystem access.
+- `Sources/DTidyIO`: everything that touches the disk, behind the `FileOps` protocol.
+- `Sources/dtidy`: the CLI.
 
 `docs/architecture.md` has the details.

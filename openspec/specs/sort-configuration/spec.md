@@ -2,18 +2,18 @@
 
 ## Purpose
 
-Lets users customize what dsort sorts and where items go through a single, validated JSON file, while working out of the box with built-in defaults when no file exists.
+Lets users customize what dtidy sorts and where items go through a single, validated JSON file, while working out of the box with built-in defaults when no file exists.
 
 ## Requirements
 
 ### Requirement: Config file location
 The system SHALL read configuration from the first of these that applies:
 1. the path given by `--config`;
-2. `$XDG_CONFIG_HOME/dsort/config.json`, when `XDG_CONFIG_HOME` is set and non-empty;
-3. the platform's per-user config file for dsort.
+2. `$XDG_CONFIG_HOME/dtidy/config.json`, when `XDG_CONFIG_HOME` is set and non-empty;
+3. the platform's per-user config file for dtidy.
 
 #### Scenario: Explicit path wins
-- **WHEN** the user runs `dsort plan --config ./alt.json`
+- **WHEN** the user runs `dtidy plan --config ./alt.json`
 - **THEN** rules from `./alt.json` are used even if the platform's default config file exists
 
 ### Requirement: Built-in defaults without a file
@@ -27,7 +27,7 @@ When no config file exists, the system SHALL use built-in defaults. They SHALL i
 - fallback `Other`.
 
 #### Scenario: First run without config
-- **WHEN** no config file exists and the user runs `dsort plan`
+- **WHEN** no config file exists and the user runs `dtidy plan`
 - **THEN** the plan uses the default buckets and no error is reported
 
 #### Scenario: Office document has a default bucket
@@ -55,11 +55,11 @@ The system SHALL validate the config before scanning and, on any error, exit 64 
 
 #### Scenario: Path escape is rejected
 - **WHEN** a category destination is `../Documents`
-- **THEN** dsort exits 64 naming that category's destination as invalid
+- **THEN** dtidy exits 64 naming that category's destination as invalid
 
 #### Scenario: Bad regular expression
 - **WHEN** a triage rule's pattern is `^(Screenshot`
-- **THEN** dsort exits 64 naming that rule and the compile error
+- **THEN** dtidy exits 64 naming that rule and the compile error
 
 ### Requirement: Home directory expansion
 A leading `~` in `root` SHALL expand to the user's home directory.
@@ -69,12 +69,12 @@ A leading `~` in `root` SHALL expand to the user's home directory.
 - **THEN** the scanned folder is the user's Desktop
 
 ### Requirement: Config commands
-`dsort config path` SHALL print the config path in effect and whether the file exists. `dsort config init` SHALL write the built-in defaults as a config file and SHALL refuse to overwrite an existing file. `dsort config validate` SHALL report validation results without scanning.
+`dtidy config path` SHALL print the config path in effect and whether the file exists. `dtidy config init` SHALL write the built-in defaults as a config file and SHALL refuse to overwrite an existing file. `dtidy config validate` SHALL report validation results without scanning.
 
 #### Scenario: Init does not overwrite
-- **WHEN** a config file already exists and the user runs `dsort config init`
-- **THEN** the existing file is unchanged and dsort exits 64 with a message that the file exists
+- **WHEN** a config file already exists and the user runs `dtidy config init`
+- **THEN** the existing file is unchanged and dtidy exits 64 with a message that the file exists
 
 #### Scenario: Init output is valid
-- **WHEN** the user runs `dsort config init` with no existing file and then `dsort config validate`
+- **WHEN** the user runs `dtidy config init` with no existing file and then `dtidy config validate`
 - **THEN** validation passes
