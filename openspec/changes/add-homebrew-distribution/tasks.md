@@ -36,7 +36,7 @@ Steps marked **(you)** need the author's signed-in GitHub account. The apply wor
   7. create the GitHub Release;
   8. compute the tarball checksum;
   9. bump the formula (`brew bump-formula-pr --url … dtidy-app/tap/dtidy`, or the tap's autobump);
-  10. label the tap pull request `pr-pull` to publish bottles;
+  10. publish bottles by running the tap's `brew pr-pull` workflow (Actions → Run workflow) with the pull request number;
   11. never move a published tag.
 
   Verify that every command it names exists (the Make targets, and the `brew` subcommands via `brew help <cmd>`).
@@ -51,19 +51,19 @@ Steps marked **(you)** need the author's signed-in GitHub account. The apply wor
 ## 3. Publish the source
 
 - [x] 3.1 Add `origin` (`https://github.com/dtidy-app/dtidy-macos.git`) and push `main`. **(you)** Authenticate when git asks, with a personal access token or the macOS keychain helper. Verify on GitHub that every commit shows the `t-ilk` avatar and links to the account. *Result 2026-10-14:* pushed with the stored keychain login, with no prompt. The GitHub API shows all 5 commits authored and committed by `t-ilk`, and `origin/main` equals the local `main` (`7642436`).
-- [ ] 3.2 Run `make release-check VERSION=0.1.0`, create the annotated tag `v0.1.0`, push it, and create the GitHub Release `v0.1.0` with short notes **(you, in the web UI, or with `gh` if installed)**. Verify that `curl -fL https://github.com/dtidy-app/dtidy-macos/archive/refs/tags/v0.1.0.tar.gz | shasum -a 256` succeeds. Record the checksum in this task.
+- [x] 3.2 Run `make release-check VERSION=0.1.0`, create the annotated tag `v0.1.0`, push it, and create the GitHub Release `v0.1.0` with short notes **(you, in the web UI, or with `gh` if installed)**. Verify that `curl -fL https://github.com/dtidy-app/dtidy-macos/archive/refs/tags/v0.1.0.tar.gz | shasum -a 256` succeeds. Record the checksum in this task. *Progress 2026-10-14:* tag `v0.1.0` (annotated) is pushed and points to `1f61b86`. The tarball's SHA-256, the same on two downloads, is `03d170f6ea3d2f65b1554c896cf085ce8ee237218411b2a8c8e528bda9a7d784`, and it contains `docs/man/dtidy.1`. The GitHub Release `dtidy 0.1.0` was published at 2026-10-14T20:10:48Z (latest, not a pre-release).
 
 ## 4. Tap and formula
 
-- [ ] 4.1 **(you)** Create the empty public repository `dtidy-app/homebrew-tap`. Then run `brew tap-new dtidy-app/homebrew-tap` locally, add the remote, and push. Verify that the tap's Actions tab lists the `tests`, `publish` and `autobump` workflows.
-- [ ] 4.2 Write `Formula/dtidy.rb` as in the design, with the recorded checksum. Verify that `brew style dtidy-app/tap` and `brew audit --strict --new --online dtidy-app/tap/dtidy` report no problems.
-- [ ] 4.3 Run `brew install --build-from-source dtidy-app/tap/dtidy` and `brew test dtidy`. Then check the platform-macos scenarios:
+- [x] 4.1 **(you)** Create the empty public repository `dtidy-app/homebrew-tap`. Then run `brew tap-new dtidy-app/homebrew-tap` locally, add the remote, and push. Verify that the tap's Actions tab lists the `tests`, `publish` and `autobump` workflows. *Result 2026-10-14:* `dtidy-app/homebrew-tap` is public. The `brew tap-new` commit `01df887` (author `t-ilk`) is pushed, and the Actions list shows `brew test-bot` (tests.yml), `brew pr-pull` (publish.yml) and `brew bump` (autobump.yml), all active.
+- [x] 4.2 Write `Formula/dtidy.rb` as in the design, with the recorded checksum. Verify that `brew style dtidy-app/tap` and `brew audit --strict --new --online dtidy-app/tap/dtidy` report no problems. *Result 2026-10-14:* `brew style` and the strict online audit pass after two fixes Homebrew 7 required: `depends_on :macos` was dropped as redundant next to `depends_on macos: :sonoma`, and the test uses Ruby's `touch … mtime:` instead of the `touch` command.
+- [x] 4.3 Run `brew install --build-from-source dtidy-app/tap/dtidy` and `brew test dtidy`. Then check the platform-macos scenarios: *Result 2026-10-14:* built from source in 27 s and `brew test` passes. `dtidy --version` prints `0.1.0`, `man -w dtidy` resolves, and all three completion files are linked under `/opt/homebrew`. In zsh with only `brew shellenv` and `compinit`, `undo <Tab>` offered just the undoable run and `show <Tab>` all three. `brew uninstall` removed all five files, and a before/after `stat` listing of `~/Library/Application Support/dtidy` (2 real ledgers) and `~/.config/dtidy` (absent) was identical.
   - `dtidy --version` prints `0.1.0`;
   - `man -w dtidy` resolves;
   - `_dtidy`, `dtidy` and `dtidy.fish` exist under `$(brew --prefix)/share/zsh/site-functions`, `etc/bash_completion.d` and `share/fish/vendor_completions.d`;
   - a zsh `dtidy undo <Tab>` offers undoable run IDs, using the `zpty` harness from the completion change against a scratch history;
   - `brew uninstall dtidy` removes those files and leaves `~/.config/dtidy` and `~/Library/Application Support/dtidy` unchanged (compare listings before and after).
-- [ ] 4.4 Push the formula on a branch and open a pull request in the tap, so `tests.yml` builds bottles. **(you)** Once the checks pass, add the `pr-pull` label. Verify that the merged formula on `main` has a `bottle do` block, and that `brew uninstall dtidy && brew install dtidy-app/tap/dtidy` reports pouring a bottle.
+- [ ] 4.4 Push the formula on a branch and open a pull request in the tap, so `tests.yml` builds bottles on macOS 14, 15 and 26. **(you)** Once the checks pass, run **Actions → brew pr-pull → Run workflow** with the pull request number. Verify that the merged formula on `main` has a `bottle do` block, and that `brew uninstall dtidy && brew install dtidy-app/tap/dtidy` reports pouring a bottle. *Note 2026-10-14:* Homebrew 7's `publish.yml` is started by hand (`workflow_dispatch`), not by a `pr-pull` label as first planned. The generated test matrix (`macos-26` plus a Linux job) was changed on the tap's `main` (`4175635`) to `macos-14`, `macos-15` and `macos-26` with `fail-fast: false`. The formula is pushed on branch `dtidy-0.1.0` (`eab6c11`). The first PR run failed at `--only-tap-syntax`: actionlint rejected the leftover `container: matrix.container` line. It was removed on `main` (`33989b5`) and the branch rebased (`e42f249`). On the rerun, all three checks pass, with bottles built for macOS 15 and 26. The `macos-14` runner image has no full Xcode 16, so `test-bot` skipped the build there, and Sonoma users build from source. Still to do: run `brew pr-pull` for PR #1, then verify a bottle pours.
 
 ## 5. Integration check
 

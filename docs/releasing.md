@@ -24,7 +24,7 @@ A release is an annotated Git tag `vX.Y.Z` on `main` in [dtidy-app/dtidy-macos](
    ```
 
    This needs `HOMEBREW_GITHUB_API_TOKEN` set to a GitHub token that can open pull requests on the tap.
-10. **Publish bottles.** Wait for the pull request's `tests` checks to pass, then add the `pr-pull` label. The `publish` workflow uploads the bottles, adds the `bottle do` block, and merges.
+10. **Publish bottles.** Wait for the pull request's `brew test-bot` checks to pass on every macOS runner. Then, in the tap, open **Actions → brew pr-pull → Run workflow**, enter the pull request number, and run it. It uploads the bottles, adds the `bottle do` block to the formula, and merges the pull request. Publishing is started by hand; no label is involved.
 11. **Verify:** `brew update && brew upgrade dtidy && dtidy --version`.
 
 ## Rules

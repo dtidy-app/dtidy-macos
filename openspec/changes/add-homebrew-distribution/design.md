@@ -6,7 +6,7 @@
 - **Version and build.** `DTidyVersion.current` (`Sources/DTidyCore/Version.swift`) is `"0.1.0"`, and `--version` and the ledger `tool` field read it. `make install` and `make check-man` already exist, `docs/man/dtidy.1` is committed, and `--generate-completion-script <shell>` prints the completion scripts.
 - **Homebrew 7.0.9, as checked in its local source:**
   - `generate_completions_from_executable(bin/"dtidy", "--generate-completion-script")` appends the bare shell name by default, which matches dtidy's flag. It writes `etc/bash_completion.d/dtidy`, `share/zsh/site-functions/_dtidy` and `share/fish/vendor_completions.d/dtidy.fish`.
-  - `brew tap-new` creates a tap with `tests.yml` (`brew test-bot`), `publish.yml` (bottles, triggered by a `pr-pull` label) and `autobump.yml` workflows.
+  - `brew tap-new` creates a tap with `tests.yml` (`brew test-bot`), `publish.yml` (bottles, started by hand from the Actions tab with a pull request number) and `autobump.yml` workflows.
 - **Toolchain.** This machine has Xcode 27 with Swift 6.4. The package needs Swift tools 6.0 and macOS 14.
 - **Names.** The GitHub name `dtidy` is unavailable. The public API reports it as not found, but GitHub's sign-up form refuses it, most likely because a hidden or suspended account holds it. So an API 404 is not proof that a name is free. The organization `dtidy-app` was created on 2026-10-14. `dtidy-app/dtidy-macos` exists: public, empty, default branch `main`. The `gh` CLI is not installed.
 
@@ -60,7 +60,6 @@ class Dtidy < Formula
 
   depends_on xcode: ["16.0", :build]
   depends_on macos: :sonoma
-  depends_on :macos
 
   def install
     system "swift", "build", "--disable-sandbox", "--configuration", "release"
@@ -74,8 +73,7 @@ class Dtidy < Formula
     ENV["XDG_DATA_HOME"] = testpath/"data"
     ENV["XDG_CONFIG_HOME"] = testpath/"config"
     (testpath/"root").mkpath
-    touch testpath/"root/report.pdf"
-    system "touch", "-t", "202001010000", testpath/"root/report.pdf"
+    touch testpath/"root/report.pdf", mtime: Time.new(2020, 1, 1)
     assert_match "PDFs/report.pdf", shell_output("#{bin}/dtidy plan --root #{testpath}/root")
     refute_path_exists testpath/"data/dtidy"
   end
@@ -102,7 +100,7 @@ end
   6. push;
   7. create the GitHub Release;
   8. bump the formula (`brew bump-formula-pr --url … dtidy-app/tap/dtidy`, or the tap's autobump);
-  9. label the pull request `pr-pull` to publish bottles.
+  9. run the tap's `brew pr-pull` workflow with the pull request number to publish bottles.
 - *Why manual:* releases are rare, and every step stays visible and reversible until the push.
 
 ### Community files
@@ -119,7 +117,7 @@ end
 ## Risks / Trade-offs
 
 - **Organization lockout if `t-ilk` loses access.** → Two-factor authentication on the account is a prerequisite task. Adding a second owner is recommended in `CONTRIBUTING.md`'s maintainer notes, not required.
-- **`test-bot` bottles only cover the macOS versions GitHub runners offer**, currently arm64 on recent macOS. → Those Macs get bottles, and the rest build from source with Xcode. This is documented in the README install section.
+- **`test-bot` bottles only cover the macOS versions GitHub runners offer.** → The tap's matrix runs `macos-14`, `macos-15` and `macos-26` (all arm64), one per supported macOS. Intel Macs, and any version whose runner lacks Xcode 16, build from source with Xcode, as the README install section says. (The design originally kept `depends_on :macos` and ran the `touch` command in the test; Homebrew 7's audit rejects both, so the formula above reflects what shipped.)
 - **The release tarball's checksum changes if the tag is moved.** → Never move a published tag. The release check refuses an existing tag, and a wrong release is fixed with a new patch version.
 - **SwiftPM fetches swift-argument-parser during the Homebrew build.** → `Package.resolved` pins the exact version, and Homebrew allows network access during source builds. A failing fetch shows up in the tap's CI before users hit it.
 - **The organization name was unavailable.** → Resolved: `dtidy` was taken, and `dtidy-app` is used throughout. Moving to a different owner later would change the tap name in users' install commands, so `dtidy-app` should be treated as permanent.
