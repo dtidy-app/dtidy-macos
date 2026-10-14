@@ -79,9 +79,9 @@ public struct UndoService: Sendable {
             guard run.isFinished else {
                 throw DTidyError(.partial, "Run \(explicit) was interrupted. Run `dtidy recover` first, then undo it.")
             }
-            return run.state == .reverted || run.movedSeqs.isEmpty ? nil : run
+            return run.isUndoable ? run : nil
         }
-        return history.sortRuns.first { $0.isFinished && $0.state != .reverted && !$0.movedSeqs.isEmpty }
+        return history.sortRuns.first(where: \.isUndoable)
     }
 
     // MARK: - Locating

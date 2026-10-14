@@ -21,6 +21,7 @@ A sort run is a straight pipeline. Only the edges touch the filesystem.
 
  undo:     ledgers --> History (pure) --> Reconciler (pure decision table) --> UndoService (I/O)
  recover:  ledgers --> History (pure) --> RecoverService (I/O) --> recover ledger
+ completion: shell --> dtidy ---completion --> ledgers --> History (pure) --> run IDs on stdout
 ```
 
 1. **Scanner:** lists the top level of the root folder. It records each item's name, kind (file, package, folder, symlink, special), file identity, modification time, and whether it carries the screen-capture marker. It never reads file contents and never follows symlinks.
@@ -28,6 +29,7 @@ A sort run is a straight pipeline. Only the edges touch the filesystem.
 3. **Planner:** turns the decisions into a plan: which folders to create (parents first), and the moves with their collision suffixes already worked out against what exists in each bucket. Moves are numbered (`seq`) in name order.
 4. **Executor:** writes the whole plan to a new ledger and flushes it, creates the folders, then performs each move and records the outcome.
 5. **Undo and recover** rebuild each run's state from all the ledgers, decide what to do for each entry with a pure decision table, and only then touch files.
+6. **Completion:** the installed shell script calls the binary back through swift-argument-parser's hidden `---completion` entry point. The CLI loads the history, asks `History` for `undoableRunIds` (the same `SortRun.isUndoable` rule the default undo target uses) or `allRunIds`, and prints the IDs. No command's `run()` executes.
 
 ## Modules
 
@@ -35,7 +37,7 @@ A sort run is a straight pipeline. Only the edges touch the filesystem.
 |---|---|---|
 | `Sources/DTidyCore` | Models, configuration parsing and validation, classifier, planner, suffix naming, ledger codec, run-state derivation (`History`), undo decision table (`Reconciler`), text and JSON rendering | None. Every observation arrives as a value, so all rules are unit-tested without a disk. |
 | `Sources/DTidyIO` | `FileOps` (every system call, behind a protocol), `Scanner`, `Executor`, `SortService`, `UndoService`, `RecoverService`, `Doctor`, ledger writer/store, run lock, config loader | Yes. Every operation on user files (listing, identity, renames, folder creation and removal, lookups) goes through `FileOps`, and tests swap in a fault-injecting one. Ledger, lock, and config files are read and written directly, and so is the `.DS_Store` deletion during undo. |
-| `Sources/dtidy` | The command-line interface (swift-argument-parser): parses arguments, calls a service, prints the report, maps errors to exit codes | Only through the services |
+| `Sources/dtidy` | The command-line interface (swift-argument-parser): parses arguments, calls a service, prints the report, maps errors to exit codes. Each command's `discussion` is its help text and the source of the man page; run-ID completion lives here too | Only through the services, plus read-only history loading for completion |
 
 A port keeps this split: the pure core can be translated almost line by line, and only the I/O layer is truly platform-specific.
 
@@ -49,6 +51,7 @@ These hold on every platform. Breaking any of them is a bug.
 4. **One run at a time.** `run`, `undo`, and `recover` hold an exclusive, non-blocking lock. A second process exits with code 75.
 5. **Ledgers are append-only.** Undo and recover write their own ledgers that point at the run they act on. A run's state is always derived by reading ledgers, never stored by editing one.
 6. **Dry runs change nothing.** No files, folders, flags, ledgers, or lock files.
+7. **Help and completion are read-only.** They never take the lock, read the config file, or touch the root folder. Completion reads only the history and offers nothing, silently, when it cannot. Help is answered while arguments are parsed, before any command runs.
 
 ## Key decisions
 
@@ -61,6 +64,7 @@ These hold on every platform. Breaking any of them is a bug.
 | A config file replaces the built-in rules | No merge rules to explain or debug. `dtidy config init` writes the defaults as a starting point, so the file and the built-ins never drift. | Merging user rules into defaults: ambiguous ordering and removal. |
 | No file-manager scripting | The file manager notices renames on its own, so scripting it would only add a permission prompt and a failure mode. | Asking the file manager to refresh after each run. |
 | Top-level only, plain folders skipped by default | The Desktop's top level is where clutter accumulates; folders are usually deliberate. | Recursive sorting: surprising and hard to undo mentally. |
+| A committed, generated man page | `docs/man/dtidy.1` is generated from the help text by `make man`, and `make check-man` fails when it is stale. Installing it needs no SwiftPM plugin run, which matters inside a package manager's sandbox. | Generating the page at install time: slower and more fragile installs. |
 | Document tracking turned on before moving | Without it, an app's safe save gives a file a new file identifier, and undo would lose track of it. | Accept `replaced` for safe-saved files. |
 
 ## Glossary

@@ -188,6 +188,73 @@ func header(_ run: String, _ kind: RunKind, ts: String, reverts: String? = nil, 
     }
 }
 
+@Suite struct RunIDCandidateTests {
+    /// A sort run on day `day` whose single move either completed or failed.
+    func sortRun(_ id: String, day: Int, moved: Bool = true, committed: Bool = true) -> LedgerFile {
+        var records: [LedgerRecord] = [
+            header(id, .sort, ts: "2026-01-0\(day)T00:00:00.000Z"),
+            .mkdir(path: "/D/PDFs"), .move(move(1)), .sealed(moves: 1),
+            moved ? .done(seq: 1) : .fail(seq: 1, errno: 13, reason: "denied"),
+        ]
+        if committed { records.append(.commit(moved ? ["done": 1] : ["failed": 1])) }
+        return ledger(records)
+    }
+
+    func undo(_ id: String, day: Int, reverts: String, outcome: UndoOutcome) -> LedgerFile {
+        ledger([
+            header(id, .undo, ts: "2026-01-0\(day)T00:00:00.000Z", reverts: reverts),
+            .undone(seq: 1, outcome: outcome, from: nil, to: "/D/a.pdf", detail: nil),
+            .commit([:]),
+        ])
+    }
+
+    @Test func undoOffersOnlyUndoableSortRuns() {
+        let history = History([
+            sortRun("a", day: 1), undo("ua", day: 2, reverts: "a", outcome: .restored),
+            sortRun("b", day: 3), sortRun("c", day: 4, committed: false),
+        ])
+        #expect(history.sortRun("a")?.state == .reverted)
+        #expect(history.undoableRunIds == ["b"])
+    }
+
+    @Test func recoveredRunIsOffered() {
+        let recover = ledger([
+            header("rc", .recover, ts: "2026-01-02T00:00:00.000Z", recovers: "d"),
+            .state(seq: 1, state: .moved, at: "/D/PDFs/a.pdf"), .commit(["moved": 1]),
+        ])
+        #expect(History([sortRun("d", day: 1, committed: false), recover]).undoableRunIds == ["d"])
+    }
+
+    @Test func partiallyRevertedRunIsOffered() {
+        let history = History([sortRun("p", day: 1), undo("up", day: 2, reverts: "p", outcome: .missing)])
+        #expect(history.sortRun("p")?.state == .partiallyReverted)
+        #expect(history.undoableRunIds == ["p"])
+    }
+
+    @Test func runThatMovedNothingIsNotOffered() {
+        let history = History([sortRun("f", day: 1, moved: false)])
+        #expect(history.sortRun("f")?.state == .committed)
+        #expect(history.undoableRunIds.isEmpty)
+    }
+
+    @Test func showOffersEveryRunNewestFirst() {
+        let recover = ledger([
+            header("rc", .recover, ts: "2026-01-03T00:00:00.000Z", recovers: "c"),
+            .state(seq: 1, state: .moved, at: "/D/PDFs/a.pdf"), .commit(["moved": 1]),
+        ])
+        let history = History([
+            sortRun("a", day: 1), undo("ua", day: 2, reverts: "a", outcome: .restored),
+            recover, sortRun("c", day: 1, committed: false),
+        ])
+        #expect(history.allRunIds == ["rc", "ua", "c", "a"])
+    }
+
+    @Test func emptyHistoryOffersNothing() {
+        #expect(History([]).undoableRunIds.isEmpty)
+        #expect(History([]).allRunIds.isEmpty)
+    }
+}
+
 @Suite struct RunDetailTests {
     @Test func sortDetailShowsActualDestinationsAndUndoOutcome() throws {
         let sort = ledger([

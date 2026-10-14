@@ -11,11 +11,46 @@ Requires macOS 14 (Sonoma) or later.
 ## Build and install
 
 ```sh
-swift build -c release
-cp .build/release/dtidy /usr/local/bin/   # or anywhere on your PATH
+make                  # release build plus zsh, bash and fish completion scripts
+sudo make install     # binary, man page and completions under /usr/local
 ```
 
+`make install` puts five files under `PREFIX` (default `/usr/local`): `bin/dtidy`, `share/man/man1/dtidy.1`, and the completion scripts in `share/zsh/site-functions/`, `share/bash-completion/completions/` and `share/fish/vendor_completions.d/`. Install somewhere else with `make install PREFIX=~/.local`. `sudo make uninstall` (with the same `PREFIX`) removes exactly those files.
+
 Run the tests with `swift test`.
+
+## Shell completion and help
+
+After `make install`, Tab completes subcommands, options, `--on-conflict` values, folders for `--root`, `.json` files for `--config`, and run IDs: `dtidy undo <Tab>` offers the runs that can be undone, and `dtidy show <Tab>` offers every run. Completing never changes anything and never waits for a running dtidy.
+
+- **zsh** (the macOS default): `/usr/local/share/zsh/site-functions` is already on zsh's search path. Make sure completion is turned on in `~/.zshrc`:
+
+  ```sh
+  autoload -Uz compinit && compinit
+  ```
+
+  For another `PREFIX`, add `fpath=(<PREFIX>/share/zsh/site-functions $fpath)` before that line. After installing a new version, run `rm -f ~/.zcompdump && compinit` to refresh zsh's cache.
+- **bash**: load the script from `~/.bash_profile`. This works with the macOS bash 3.2 and with newer versions:
+
+  ```sh
+  source /usr/local/share/bash-completion/completions/dtidy
+  ```
+
+  With Homebrew's `bash-completion@2` (`brew install bash-completion@2`, then add `[[ -r "$(brew --prefix)/etc/profile.d/bash_completion.sh" ]] && . "$(brew --prefix)/etc/profile.d/bash_completion.sh"` to `~/.bash_profile`), scripts in `share/bash-completion/completions/` on its search path load on demand instead.
+- **fish**: nothing to do; fish reads `share/fish/vendor_completions.d/`.
+
+If you copied only the binary, generate a script yourself, for example for zsh:
+
+```sh
+mkdir -p ~/.zsh/completions
+dtidy --generate-completion-script zsh > ~/.zsh/completions/_dtidy
+# in ~/.zshrc, before compinit:
+fpath=(~/.zsh/completions $fpath)
+```
+
+`bash` and `fish` work the same way: `dtidy --generate-completion-script bash` or `fish`.
+
+Every command explains itself with examples: `dtidy --help`, `dtidy help undo`, or `dtidy config init --help`. The top-level help also lists the exit codes and where the config and history live. The same text is in the manual: `man dtidy`.
 
 ## Sort the Desktop
 

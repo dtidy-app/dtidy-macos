@@ -86,6 +86,10 @@ public struct SortRun: Sendable {
 
     public var isFinished: Bool { committed || recovered != nil }
 
+    /// Whether undo can act on this run: finished, not fully reverted, and something moved.
+    /// The default undo target and run-ID completion both use this rule.
+    public var isUndoable: Bool { isFinished && state != .reverted && !movedSeqs.isEmpty }
+
     public var state: RunState {
         guard isFinished else { return .interrupted }
         let moved = movedSeqs
@@ -119,6 +123,16 @@ public struct History: Sendable {
 
     public var sortRuns: [SortRun] {
         ledgers.filter { $0.header.kind == .sort }.compactMap { sortRun($0.runId) }
+    }
+
+    /// IDs of the sort runs undo can act on, newest first. Offered by `undo` completion.
+    public var undoableRunIds: [String] {
+        sortRuns.filter(\.isUndoable).map(\.runId)
+    }
+
+    /// IDs of every run of every kind, newest first. Offered by `show` completion.
+    public var allRunIds: [String] {
+        ledgers.map(\.runId)
     }
 
     /// Sort runs that stopped before committing and were never recovered.

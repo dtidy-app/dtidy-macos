@@ -27,6 +27,10 @@ let package = Package(
         ),
         .testTarget(name: "DTidyCoreTests", dependencies: ["DTidyCore"]),
         .testTarget(name: "DTidyIOTests", dependencies: ["DTidyCore", "DTidyIO"]),
+        .testTarget(
+            name: "DTidyCLITests",
+            dependencies: ["dtidy", .product(name: "ArgumentParser", package: "swift-argument-parser")]
+        ),
     ],
     swiftLanguageModes: [.v6]
 )
