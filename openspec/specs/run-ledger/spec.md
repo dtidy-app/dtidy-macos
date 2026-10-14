@@ -7,11 +7,11 @@ Keeps a durable, append-only record of every run so that any completed or interr
 ## Requirements
 
 ### Requirement: Ledger location
-The system SHALL store run ledgers in `$XDG_DATA_HOME/dsort/history/` when `XDG_DATA_HOME` is set and non-empty, otherwise in `~/Library/Application Support/dsort/history/`, with one file per run named by its run ID.
+The system SHALL store run ledgers in `<data directory>/history/`, with one file per run named by its run ID. The data directory is `$XDG_DATA_HOME/dsort` when `XDG_DATA_HOME` is set and non-empty, otherwise the platform's per-user application data location for dsort.
 
 #### Scenario: Default location
 - **WHEN** `XDG_DATA_HOME` is unset and a run completes
-- **THEN** its ledger exists under `~/Library/Application Support/dsort/history/`
+- **THEN** its ledger exists under the platform's data directory for dsort, in `history/`
 
 #### Scenario: XDG override
 - **WHEN** `XDG_DATA_HOME=/tmp/x` and a run completes
@@ -32,11 +32,15 @@ The system SHALL write every planned move and folder creation to the ledger and 
 - **THEN** the ledger lists all 30 planned moves with their source, destination, and file identity
 
 ### Requirement: Each move records file identity
-For each move the ledger SHALL record the source path, planned destination path, the volume ID, inode number, birth time, document identifier, and whether dsort set the tracked flag.
+For each move the ledger SHALL record:
+- the source path and the planned destination path;
+- the file identity: volume identifier, file identifier, and creation time;
+- the file's document identity (0 when the platform or file has none);
+- whether dsort enabled document tracking for the file.
 
 #### Scenario: Identity fields present
 - **WHEN** a run moves `invoice.pdf`
-- **THEN** its ledger entry contains the source, destination, volume ID, inode, birth time, document ID, and `trackedByUs`
+- **THEN** its ledger entry contains the source, destination, volume identifier, file identifier, creation time, document identity, and `trackedByUs`
 
 ### Requirement: Actual destinations are recorded
 When a move lands at a name different from the planned destination, the system SHALL record the actual destination and flush it to stable storage before attempting that move.
@@ -67,11 +71,15 @@ When reading a ledger, the system SHALL ignore an incomplete final record and tr
 - **THEN** `dsort history` lists that run as `interrupted` and the readable records are used
 
 ### Requirement: Run history listing
-`dsort history` SHALL list runs newest first with run ID, kind (sort, undo, recover), start time, counts, and state (committed, interrupted, reverted), and accept `--limit N`.
+`dsort history` SHALL list runs newest first and accept `--limit N`. Each run shows its run ID, kind (sort, undo, recover), start time, and counts. It also shows its state: `committed`, `interrupted`, `recovered`, `partially-reverted`, or `reverted`.
 
 #### Scenario: Reverted run is marked
 - **WHEN** a sort run was later undone
 - **THEN** `dsort history` shows that sort run with state `reverted`
+
+#### Scenario: Recovered run is marked
+- **WHEN** an interrupted sort run was reconciled with `dsort recover`
+- **THEN** `dsort history` shows it with state `recovered` until it is undone
 
 ### Requirement: Single run details
 `dsort show RUN_ID` SHALL print every recorded move of that run with its outcome and actual destination.
@@ -93,3 +101,10 @@ The system SHALL refuse to start a new `run` while an interrupted run exists, ex
 #### Scenario: Sort after crash
 - **WHEN** an interrupted run exists and the user runs `dsort run`
 - **THEN** no moves are made and the message names `dsort recover`
+
+### Requirement: Runs without moves write no ledger
+A run whose plan contains no moves SHALL NOT create a ledger file. A schedule that finds nothing to sort therefore leaves the history unchanged.
+
+#### Scenario: Nothing to sort
+- **WHEN** `dsort run` finds only skipped items
+- **THEN** it reports that there is nothing to sort and no new ledger file exists

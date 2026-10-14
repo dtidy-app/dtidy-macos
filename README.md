@@ -164,14 +164,7 @@ Every run that moves something writes a ledger before the first move happens. Le
 - `$XDG_DATA_HOME/dsort/history/` when `XDG_DATA_HOME` is set, otherwise
 - `~/Library/Application Support/dsort/history/`
 
-Each run has one file, `<run-id>.jsonl`, named by a run ID such as `20261014T190912Z-3f9a0c1d2e4b` (UTC start time plus a random suffix). The file holds one JSON record per line:
-
-- the plan (every folder to create and every move, with each file's volume, inode, and birth time);
-- a `sealed` marker, flushed to disk before anything moves;
-- per-move outcomes, including the document ID dsort tracked and any collision rename;
-- a final `commit` with counts.
-
-Ledgers are append-only. Undo and recovery write their own ledgers that point at the run they act on, so a run's original record is never edited.
+Each run has one file, `<run-id>.jsonl`, named by a run ID such as `20261014T190912Z-3f9a0c1d2e4b` (UTC start time plus a random suffix). Ledgers are plain text, one JSON record per line, and are never edited after the fact: undo and recovery write their own ledgers. The record format is documented in [docs/ledger-format.md](docs/ledger-format.md).
 
 ```sh
 dsort history              # newest first: run ID, kind, start time, state, counts
@@ -236,6 +229,17 @@ Validation rejects unknown fields, regular expressions that do not compile, unkn
 
 - **macOS 26.6 (APFS):** sorting and undoing on the real Desktop. Finder updates the icons on its own, with "Use Stacks" both off and on.
 - **macOS 14 and 15:** not yet tested by hand. The minimum supported version is macOS 14.
+
+## Documentation
+
+This README is for people using dsort. For maintainers and anyone porting it:
+
+- [docs/architecture.md](docs/architecture.md): how dsort is built, the invariants it never breaks, and why.
+- [docs/ledger-format.md](docs/ledger-format.md): the run ledger format and how run state is derived.
+- [docs/platform-macos.md](docs/platform-macos.md): which macOS mechanism provides each guarantee, and what was verified about macOS.
+- [docs/porting.md](docs/porting.md): how to bring dsort to another operating system.
+- [AGENTS.md](AGENTS.md): a short map for coding agents.
+- [`openspec/specs/`](openspec/specs/): the behaviour specification.
 
 ## License
 

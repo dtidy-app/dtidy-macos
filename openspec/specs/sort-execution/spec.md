@@ -27,8 +27,8 @@ The system SHALL move items only with an atomic rename that fails if the destina
 - **WHEN** `Doc.pdf` is to be moved into `PDFs/` and `PDFs/doc.PDF` already exists
 - **THEN** `PDFs/doc.PDF` is unchanged and `Doc.pdf` is moved under a suffixed name
 
-### Requirement: Collisions get Finder-style suffixes
-When a destination name is taken, the system SHALL try `name (1).ext`, `name (2).ext`, and so on, keeping known compound extensions (such as `.tar.gz`) and package extensions intact, and keeping the resulting name within 255 bytes of UTF-8 by shortening the base name.
+### Requirement: Collisions get numbered suffixes
+When a destination name is taken, the system SHALL try `name (1).ext`, `name (2).ext`, and so on. It SHALL keep known compound extensions (such as `.tar.gz`) and package extensions intact. It SHALL keep the resulting name within 255 bytes of UTF-8 by shortening the base name.
 
 #### Scenario: Compound extension is preserved
 - **WHEN** `backup.tar.gz` collides in `Archives/`
@@ -53,11 +53,15 @@ The system SHALL create a bucket folder, including intermediate folders, only wh
 - **THEN** `Images/_Screenshots/` is not created
 
 ### Requirement: Moved files are marked as tracked
-Before moving each file, the system SHALL set the file's kernel `UF_TRACKED` flag if it is not already set, so that the file keeps a stable document identifier across later safe saves, and SHALL record whether dsort set the flag.
+Some platforms keep a document identity across later safe saves only when tracking is turned on for the file. On those platforms the system SHALL turn tracking on before moving each file, if it is not already on, and SHALL record whether dsort did so. If turning tracking on fails, the file SHALL still be moved and recorded with document identity 0.
 
 #### Scenario: Untracked file gains a document identity
-- **WHEN** an untracked `notes.txt` is moved
-- **THEN** after the move it carries `UF_TRACKED` and a non-zero document identifier, and the ledger records `trackedByUs: true`
+- **WHEN** an untracked `notes.txt` is moved on a platform with opt-in document tracking
+- **THEN** after the move it has a non-zero document identity, and the ledger records `trackedByUs: true`
+
+#### Scenario: Tracking unavailable
+- **WHEN** tracking cannot be enabled for a file
+- **THEN** the file is moved and its ledger entry records document identity 0 and `trackedByUs: false`
 
 ### Requirement: Single concurrent run
 The system SHALL hold an exclusive lock for the duration of any `run`, `undo`, or `recover`. If another dsort process holds the lock, the command SHALL exit with code 75 without changing anything.
@@ -67,11 +71,11 @@ The system SHALL hold an exclusive lock for the duration of any `run`, `undo`, o
 - **THEN** the second command exits with code 75 and the Desktop is unchanged by it
 
 ### Requirement: Permission failures are explained
-When access to the root folder is denied by macOS privacy controls, the system SHALL exit with code 77 and print which app or binary needs Desktop folder or Full Disk Access permission and where to grant it.
+When the operating system's access controls deny access to the root folder, the system SHALL exit with code 77. It SHALL print which app or binary needs permission and where the user grants it.
 
 #### Scenario: Terminal lacks Desktop access
-- **WHEN** reading `~/Desktop` fails with `Operation not permitted`
-- **THEN** dsort exits 77 and names the System Settings privacy pane to open
+- **WHEN** reading the root folder from a terminal fails because the operating system denies access
+- **THEN** dsort exits 77 and names the app or binary that needs access and where to grant it
 
 ### Requirement: Exit codes report outcome
 The system SHALL exit 0 when every planned action succeeded, 1 when some items failed or were left unresolved, 64 for usage or configuration errors, 75 when the lock is held, and 77 for permission errors.
@@ -87,9 +91,9 @@ The system SHALL exit 0 when every planned action succeeded, 1 when some items f
 - **WHEN** the user runs `dsort doctor` with Desktop access granted
 - **THEN** every check is reported as passing and the exit code is 0
 
-### Requirement: No Finder scripting
-The system SHALL NOT send Apple Events or run AppleScript, and SHALL NOT require Automation permission.
+### Requirement: No file-manager scripting
+The system SHALL NOT script or automate the platform's file manager or desktop shell, and SHALL NOT require automation permissions. The file manager is expected to notice moves on its own.
 
 #### Scenario: Run under launchd
-- **WHEN** dsort runs as a `launchd` agent
-- **THEN** no Automation permission prompt or Apple Events error can occur
+- **WHEN** dsort runs from the platform's scheduler (such as `launchd` on macOS) with no user interaction
+- **THEN** no automation permission prompt or scripting error can occur

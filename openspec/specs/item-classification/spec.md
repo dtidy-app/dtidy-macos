@@ -7,7 +7,7 @@ Decides which items on the top level of the Desktop are eligible for sorting and
 ## Requirements
 
 ### Requirement: Top-level scanning only
-The system SHALL consider only the direct children of the configured root folder (default `~/Desktop`) and SHALL NOT descend into subfolders.
+The system SHALL consider only the direct children of the configured root folder (default: the user's Desktop folder, located as the platform defines) and SHALL NOT descend into subfolders.
 
 #### Scenario: Nested file is ignored
 - **WHEN** `~/Desktop/Project/report.pdf` exists and the Desktop is sorted
@@ -28,14 +28,14 @@ The system SHALL skip items matching the configured skip globs, which by default
 - **THEN** it is skipped with reason `skip-glob`
 
 ### Requirement: Plain folders are skipped by default
-The system SHALL skip directories that are not packages unless the configuration enables folder sorting. Packages (such as `.app`, `.rtfd`, `.key`) SHALL be treated as single files, determined by the system package attribute rather than by the presence of a dot in the name.
+The system SHALL skip directories unless the configuration enables folder sorting. A directory that the platform presents as a single document (a package or bundle) SHALL be treated as a file. Whether it is one SHALL be decided by the platform, never by the presence of a dot in the name.
 
 #### Scenario: User folder stays in place
 - **WHEN** `~/Desktop/toolkit-0.12.0-beta/` is a plain directory and folder sorting is not enabled
 - **THEN** it is skipped with reason `folder`
 
 #### Scenario: Application bundle is sorted as a file
-- **WHEN** `~/Desktop/Tool.app` is an application package
+- **WHEN** a directory on the Desktop is one the platform reports as a package, such as an application bundle
 - **THEN** it is classified like any other file
 
 ### Requirement: Symbolic links are skipped
@@ -67,17 +67,17 @@ The system SHALL skip any top-level item whose name equals the first path compon
 - **THEN** it is skipped with reason `bucket`
 
 ### Requirement: Screenshots are detected by system metadata
-The system SHALL classify an item as a screenshot when its `com.apple.metadata:kMDItemIsScreenCapture` extended attribute decodes to boolean true, regardless of its file name or language, and route it to the screenshot triage bucket (default `Images/_Screenshots`).
+When the platform provides a screen-capture marker (file metadata its screenshot tool attaches), the system SHALL classify an item carrying that marker as a screenshot, whatever its file name or language. The item SHALL go to the screenshot triage bucket (default `Images/_Screenshots`).
 
 #### Scenario: Renamed screenshot is still detected
-- **WHEN** a screenshot carrying the screen-capture attribute was renamed to `diagram.png`
+- **WHEN** a screenshot carrying the platform's screen-capture marker was renamed to `diagram.png`
 - **THEN** it is routed to `Images/_Screenshots`
 
 ### Requirement: Screenshots are detected by localized name as a fallback
-The system SHALL classify an item without the screen-capture attribute as a screenshot when its Unicode-NFC-normalized name matches a configured screenshot name pattern. The defaults SHALL cover at least English, Turkish, German, and French macOS screenshot names.
+The system SHALL classify an item without the screen-capture marker as a screenshot when its Unicode-NFC-normalized name matches a configured screenshot name pattern. The defaults SHALL cover the platform's default screenshot names in at least English, Turkish, German, and French.
 
 #### Scenario: Exported screenshot copy is detected by name
-- **WHEN** `Screenshot 2026-08-24 at 22.11.28.jpg` has no screen-capture attribute
+- **WHEN** `Screenshot 2026-08-24 at 22.11.28.jpg` has no screen-capture marker
 - **THEN** it is routed to `Images/_Screenshots`
 
 #### Scenario: Decomposed accented name still matches
@@ -99,11 +99,15 @@ The system SHALL check user-configured extension mappings, compared case-insensi
 - **THEN** it is routed to `Code`, not to the bucket for movies
 
 ### Requirement: System type conformance decides categories
-The system SHALL determine an item's type from its file name extension without reading its contents, and route it to the first configured category whose type identifiers the item's type conforms to.
+The system SHALL get an item's type from the platform's file type system, using only the file name extension and never the contents. It SHALL route the item to the first configured category containing a type the item's type belongs to (directly or through the platform's type hierarchy).
 
 #### Scenario: PDF is routed by type
-- **WHEN** `~/Desktop/invoice.pdf` exists and a category maps `com.adobe.pdf` to `PDFs`
+- **WHEN** `~/Desktop/invoice.pdf` exists and a category lists the platform's PDF type for `PDFs`
 - **THEN** it is routed to `PDFs`
+
+#### Scenario: Contents are not read
+- **WHEN** a file named `photo.png` contains PDF data
+- **THEN** it is classified as an image by its extension
 
 ### Requirement: Unmatched items go to the fallback bucket
 The system SHALL route eligible items that match no triage rule, extension override, or category to the fallback bucket (default `Other`).

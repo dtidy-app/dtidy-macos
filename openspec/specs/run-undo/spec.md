@@ -18,18 +18,23 @@ Reverses a recorded sort run by finding each moved file wherever it is now and p
 - **THEN** dsort reports that there is nothing to undo and exits 0
 
 ### Requirement: File identity matching
-A file SHALL be considered the recorded file if its volume ID, inode number, and birth time all equal the recorded values, or if its document identifier is non-zero and equals the recorded one.
+A file SHALL be considered the recorded file in either of two cases:
+- its volume identifier, file identifier, and creation time all equal the recorded values;
+- its document identity is non-zero and equals the recorded one.
 
 #### Scenario: Safe-saved file still matches
-- **WHEN** an app safe-saved a moved file, giving it a new inode but the same document identifier
+- **WHEN** an app safe-saved a moved file, giving it a new file identifier but the same document identity
 - **THEN** undo treats it as the recorded file
 
 #### Scenario: Reused inode does not match
-- **WHEN** the inode at a path equals the recorded inode but the birth time and document ID differ
+- **WHEN** the file identifier at a path equals the recorded one but the creation time and document identity differ
 - **THEN** undo does not treat it as the recorded file
 
 ### Requirement: Locating moved files
-For each entry, the system SHALL look for the recorded file first at its recorded destination, then at the current path the kernel reports for its inode, then by document identifier among the bucket folders created or used by the run.
+For each entry, the system SHALL look for the recorded file in this order:
+1. at its recorded destination;
+2. at the current path the platform reports for its file identifier, where the platform supports that lookup;
+3. by document identity, among the bucket folders the run created or used.
 
 #### Scenario: User renamed the file after sorting
 - **WHEN** `PDFs/invoice.pdf` was renamed by the user to `PDFs/paid/invoice-2026.pdf`
@@ -37,7 +42,7 @@ For each entry, the system SHALL look for the recorded file first at its recorde
 
 #### Scenario: User moved and then edited the file
 - **WHEN** a sorted file was moved within the bucket folders and later safe-saved
-- **THEN** undo finds it by document identifier and restores it
+- **THEN** undo finds it by document identity and restores it
 
 ### Requirement: Restores never overwrite
 The system SHALL restore files only with an atomic rename that fails if the target name exists. If the original name is taken, it SHALL restore as `name (restored).ext`, then `name (restored 2).ext`, and so on, unless `--on-conflict skip` is given, in which case the entry is left in place and reported.
@@ -47,10 +52,10 @@ The system SHALL restore files only with an atomic rename that fails if the targ
 - **THEN** the new file is unchanged and the sorted one returns as `~/Desktop/report (restored).pdf`
 
 ### Requirement: Trashed files are not restored
-When the recorded file is found inside a Trash folder, the system SHALL leave it in place and report it as `in-trash` with its current path.
+When the recorded file is found inside the platform's trash, the system SHALL leave it in place and report it as `in-trash` with its current path.
 
 #### Scenario: User trashed a sorted file
-- **WHEN** a sorted file is now at `~/.Trash/old.pdf`
+- **WHEN** a sorted file is now in the platform's trash
 - **THEN** it stays there and undo reports `in-trash` with that path
 
 ### Requirement: Only proven absence counts as missing
@@ -90,18 +95,22 @@ An undo that leaves entries unresolved SHALL mark the target run as partially re
 - **THEN** that entry is restored and the run becomes fully reverted
 
 ### Requirement: Empty bucket folders are removed
-After restoring files, the system SHALL remove folders that the target run created, deepest first, only if they are empty, and SHALL leave non-empty folders in place.
+After restoring files, the system SHALL remove folders that the target run created, deepest first, only if they are empty, and SHALL leave non-empty folders in place. A folder holding nothing but the platform's folder-metadata file counts as empty.
 
 #### Scenario: Folder still holds a user file
 - **WHEN** the user saved a new file into `Images/` after the sort and the run is undone
 - **THEN** `Images/` and the new file remain
 
+#### Scenario: Folder holds only metadata
+- **WHEN** after restoring, a folder the run created contains only the platform's folder-metadata file
+- **THEN** the folder is removed
+
 ### Requirement: Tracked flag is left in place
-Undo SHALL NOT clear the `UF_TRACKED` flag on restored files.
+Undo SHALL NOT turn off document tracking that dsort enabled on a file.
 
 #### Scenario: Flag survives undo
-- **WHEN** a file that dsort marked as tracked is restored
-- **THEN** it still carries `UF_TRACKED`
+- **WHEN** a file for which dsort enabled document tracking is restored
+- **THEN** document tracking is still enabled for it
 
 ### Requirement: Undo dry run
 `dsort undo --dry-run` SHALL print, for each entry, where the file was found and what would happen, without changing any file, folder, or ledger.
@@ -111,8 +120,12 @@ Undo SHALL NOT clear the `UF_TRACKED` flag on restored files.
 - **THEN** each entry shows its planned outcome and the filesystem is unchanged
 
 ### Requirement: Undo outcome and exit code
-Undo SHALL report counts per outcome (restored, restored-renamed, already-restored, in-trash, missing, inaccessible, replaced, skipped-conflict) and exit 0 only when every entry was restored or already restored, otherwise 1.
+Undo SHALL report counts per outcome: `restored`, `restored-renamed`, `already-restored`, `in-trash`, `missing`, `inaccessible`, `replaced`, `skipped-conflict`, `failed`. It SHALL exit 0 only when every entry was restored or already restored, otherwise 1.
 
 #### Scenario: One file missing
 - **WHEN** 19 entries are restored and one is `missing`
 - **THEN** dsort exits 1 and lists the missing entry
+
+#### Scenario: Rename fails for another reason
+- **WHEN** restoring an entry fails with an error other than a name conflict
+- **THEN** the entry is reported as `failed` with the error and dsort exits 1
