@@ -50,7 +50,7 @@ Steps marked **(you)** need the author's signed-in GitHub account. The apply wor
 
 ## 3. Publish the source
 
-- [ ] 3.1 Add `origin` (`https://github.com/dtidy-app/dtidy-macos.git`) and push `main`. **(you)** Authenticate when git asks, with a personal access token or the macOS keychain helper. Verify on GitHub that every commit shows the `t-ilk` avatar and links to the account.
+- [x] 3.1 Add `origin` (`https://github.com/dtidy-app/dtidy-macos.git`) and push `main`. **(you)** Authenticate when git asks, with a personal access token or the macOS keychain helper. Verify on GitHub that every commit shows the `t-ilk` avatar and links to the account. *Result 2026-10-14:* pushed with the stored keychain login, with no prompt. The GitHub API shows all 5 commits authored and committed by `t-ilk`, and `origin/main` equals the local `main` (`7642436`).
 - [ ] 3.2 Run `make release-check VERSION=0.1.0`, create the annotated tag `v0.1.0`, push it, and create the GitHub Release `v0.1.0` with short notes **(you, in the web UI, or with `gh` if installed)**. Verify that `curl -fL https://github.com/dtidy-app/dtidy-macos/archive/refs/tags/v0.1.0.tar.gz | shasum -a 256` succeeds. Record the checksum in this task.
 
 ## 4. Tap and formula
