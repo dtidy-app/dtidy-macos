@@ -92,7 +92,9 @@ Copy this table into `docs/platform-<os>.md` and fill in the last two columns. T
 
 ## Sharing specs between platforms
 
-While there is one implementation, the specs live in this repository. Once a second platform exists, move the core specs into a shared OpenSpec repository (a "store"), and have each implementation point at it. Each platform keeps only its `platform-<os>` spec and docs locally, so a spec change is made once and reviewed for every platform. See `openspec store --help` for how projects reference a store; this has not been set up for dtidy yet.
+Each platform's implementation lives in its own repository in the `dtidy-app` GitHub organization: `dtidy-app/dtidy-macos` (this one), and for a new port `dtidy-app/dtidy-<os>`, such as `dtidy-app/dtidy-linux` or `dtidy-app/dtidy-windows`. Each uses its platform's native toolchain and releases on its own schedule.
+
+While there is one implementation, the specs live in this repository. Once a second platform exists, move the core specs into a shared OpenSpec repository (a "store"), `dtidy-app/spec`, and have each implementation point at it. Each platform keeps only its `platform-<os>` spec and docs locally, so a spec change is made once and reviewed for every platform. See `openspec store --help` for how projects reference a store; this has not been set up for dtidy yet.
 
 An agent working on a port then needs only:
 - the new project's `AGENTS.md`;

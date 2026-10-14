@@ -5,6 +5,7 @@
 #   sudo make uninstall        remove what install put there
 #   make man                   regenerate docs/man/dtidy.1 from the help text
 #   make check-man             fail if docs/man/dtidy.1 is out of date
+#   make release-check VERSION=X.Y.Z   verify everything before tagging vX.Y.Z (docs/releasing.md)
 
 PREFIX ?= /usr/local
 DESTDIR ?=
@@ -21,7 +22,7 @@ GENERATED   = .build/plugins/GenerateManual/outputs/dtidy/dtidy.1
 COMPLETIONS = .build/completions/_dtidy .build/completions/dtidy .build/completions/dtidy.fish
 SOURCES    := Package.swift Package.resolved $(shell find Sources -name '*.swift')
 
-.PHONY: all build completions install uninstall man check-man
+.PHONY: all build completions install uninstall man check-man release-check
 
 all: build completions
 
@@ -69,3 +70,15 @@ check-man:
 	@diff -u .build/dtidy.1.committed .build/dtidy.1.current \
 		|| { echo "$(MANPAGE) is out of date: run 'make man' and commit the result." >&2; exit 1; }
 	@echo "$(MANPAGE) is up to date."
+
+# Run before tagging a release. Cheap checks first, so a mistake fails fast.
+release-check:
+	@test -n "$(VERSION)" || { echo "release-check: set VERSION, for example: make release-check VERSION=0.1.0" >&2; exit 1; }
+	@test -z "$$(git status --porcelain)" || { echo "release-check: the working tree is not clean; commit or stash these first:" >&2; git status --short >&2; exit 1; }
+	@! git rev-parse -q --verify "refs/tags/v$(VERSION)" >/dev/null || { echo "release-check: tag v$(VERSION) already exists; published tags are never moved." >&2; exit 1; }
+	swift build -c release
+	@built=$$($(BIN) --version); test "$$built" = "$(VERSION)" \
+		|| { echo "release-check: the binary reports $$built but VERSION is $(VERSION); update DTidyVersion.current." >&2; exit 1; }
+	swift test
+	@$(MAKE) --no-print-directory check-man
+	@echo "release-check: v$(VERSION) is ready to tag."

@@ -2,6 +2,8 @@
 
 dtidy is a macOS command-line tool that sorts the top level of the Desktop into bucket folders and can undo every run. Swift 6, Swift Package Manager, macOS 14+, GPL-3.0.
 
+This repository is `dtidy-app/dtidy-macos` on GitHub. Each operating system gets its own repository in the `dtidy-app` organization (`dtidy-app/dtidy-<os>`); the Homebrew formula lives in `dtidy-app/homebrew-tap`.
+
 ## Where the truth lives
 
 | Question | Read |
@@ -13,6 +15,7 @@ dtidy is a macOS command-line tool that sorts the top level of the Desktop into 
 | Which macOS API provides each guarantee, and what was verified about the kernel? | `docs/platform-macos.md` |
 | How do I bring dtidy to another OS? | `docs/porting.md` |
 | How do users run it? | `README.md` |
+| How is a release made? | `docs/releasing.md` |
 
 Rules:
 

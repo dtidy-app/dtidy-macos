@@ -8,9 +8,23 @@
 
 Requires macOS 14 (Sonoma) or later.
 
-## Build and install
+## Install
+
+With [Homebrew](https://brew.sh):
 
 ```sh
+brew install dtidy-app/tap/dtidy
+```
+
+This installs the binary, the man page, and the zsh, bash and fish completions. `brew upgrade dtidy` keeps them current, and `brew uninstall dtidy` removes them but leaves your config and run history in place. Homebrew installs a prebuilt bottle when one exists for your Mac. Otherwise it builds dtidy from source, which needs Xcode 16 or later.
+
+### Build from source
+
+The source is at [github.com/dtidy-app/dtidy-macos](https://github.com/dtidy-app/dtidy-macos).
+
+```sh
+git clone https://github.com/dtidy-app/dtidy-macos.git
+cd dtidy-macos
 make                  # release build plus zsh, bash and fish completion scripts
 sudo make install     # binary, man page and completions under /usr/local
 ```
@@ -21,9 +35,9 @@ Run the tests with `swift test`.
 
 ## Shell completion and help
 
-After `make install`, Tab completes subcommands, options, `--on-conflict` values, folders for `--root`, `.json` files for `--config`, and run IDs: `dtidy undo <Tab>` offers the runs that can be undone, and `dtidy show <Tab>` offers every run. Completing never changes anything and never waits for a running dtidy.
+Once dtidy is installed, Tab completes subcommands, options, `--on-conflict` values, folders for `--root`, `.json` files for `--config`, and run IDs: `dtidy undo <Tab>` offers the runs that can be undone, and `dtidy show <Tab>` offers every run. Completing never changes anything and never waits for a running dtidy.
 
-- **zsh** (the macOS default): `/usr/local/share/zsh/site-functions` is already on zsh's search path. Make sure completion is turned on in `~/.zshrc`:
+- **zsh** (the macOS default): Homebrew's `share/zsh/site-functions` is on zsh's search path once `eval "$(brew shellenv)"` runs (Homebrew's installer adds it to `~/.zprofile`), and `/usr/local/share/zsh/site-functions` always is. Make sure completion is turned on in `~/.zshrc`:
 
   ```sh
   autoload -Uz compinit && compinit
@@ -33,11 +47,12 @@ After `make install`, Tab completes subcommands, options, `--on-conflict` values
 - **bash**: load the script from `~/.bash_profile`. This works with the macOS bash 3.2 and with newer versions:
 
   ```sh
-  source /usr/local/share/bash-completion/completions/dtidy
+  source "$(brew --prefix)/etc/bash_completion.d/dtidy"         # Homebrew install
+  source /usr/local/share/bash-completion/completions/dtidy    # make install
   ```
 
-  With Homebrew's `bash-completion@2` (`brew install bash-completion@2`, then add `[[ -r "$(brew --prefix)/etc/profile.d/bash_completion.sh" ]] && . "$(brew --prefix)/etc/profile.d/bash_completion.sh"` to `~/.bash_profile`), scripts in `share/bash-completion/completions/` on its search path load on demand instead.
-- **fish**: nothing to do; fish reads `share/fish/vendor_completions.d/`.
+  With Homebrew's `bash-completion@2` (`brew install bash-completion@2`, then add `[[ -r "$(brew --prefix)/etc/profile.d/bash_completion.sh" ]] && . "$(brew --prefix)/etc/profile.d/bash_completion.sh"` to `~/.bash_profile`), Homebrew-installed scripts load automatically, and so do scripts in `share/bash-completion/completions/` on its search path.
+- **fish**: nothing to do; fish reads `share/fish/vendor_completions.d/` under Homebrew's prefix and `/usr/local`.
 
 If you copied only the binary, generate a script yourself, for example for zsh:
 
@@ -276,6 +291,9 @@ This README is for people using dtidy. For maintainers and anyone porting it:
 - [docs/platform-macos.md](docs/platform-macos.md): which macOS mechanism provides each guarantee, and what was verified about macOS.
 - [docs/porting.md](docs/porting.md): how to bring dtidy to another operating system.
 - [AGENTS.md](AGENTS.md): a short map for coding agents.
+- [CONTRIBUTING.md](CONTRIBUTING.md): how to report bugs and propose changes.
+- [SECURITY.md](SECURITY.md): how to report a problem that could put files at risk.
+- [docs/releasing.md](docs/releasing.md): how a release is made.
 - [`openspec/specs/`](openspec/specs/): the behaviour specification.
 
 ## License
